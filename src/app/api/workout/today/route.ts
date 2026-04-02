@@ -59,9 +59,11 @@ export async function GET() {
     return NextResponse.json({
       session: workoutSession,
       dayPlan: {
+        dayType: dayPlan.dayType,
         label: dayPlan.label,
         tag: dayPlan.tag,
         tagColor: dayPlan.tagColor,
+        exercises: dayPlan.exercises,
       },
     });
   } catch (error) {
