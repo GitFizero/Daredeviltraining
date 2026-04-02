@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id              String           @id @default(cuid())
+  name            String?
+  email           String?          @unique
+  emailVerified   DateTime?
+  image           String?
+  accounts        Account[]
+  sessions        Session[]
+  profile         UserProfile?
+  workoutSessions WorkoutSession[]
+  nutritionLogs   NutritionLog[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model UserProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weightKg       Float    @default(77)
+  heightCm       Float    @default(178)
+  bodyFatPercent  Float?   @default(18)
+  goalType       String   @default("lean_cut")
+  dailyKcalTarget Int     @default(2000)
+  dailyProteinG  Int      @default(154)
+  dailyCarbsG    Int      @default(200)
+  dailyFatG      Int      @default(55)
+  trainingWindow String   @default("12h-14h")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum SessionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum DayType {
+  PUSH
+  PULL
+  CARDIO_HIIT
+  LEGS
+  FULL_BODY
+  ACTIVE_RECOVERY
+  REST
+}
+
+model WorkoutSession {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime      @db.Date
+  dayType         DayType
+  status          SessionStatus @default(PLANNED)
+  durationMinutes Int?
+  totalVolume     Float?
+  calendarEventId String?
+  exercises       ExerciseLog[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([userId, date])
+}
+
+model ExerciseLog {
+  id           String         @id @default(cuid())
+  sessionId    String
+  session      WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseName String
+  muscleGroup  String
+  orderIndex   Int
+  sets         Int
+  reps         String
+  weightKg     Float
+  setsCompleted Int           @default(0)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+enum MealType {
+  REVEIL
+  PRE_TRAINING
+  POST_TRAINING
+  DINER
+  SNACK_SOIR
+}
+
+model NutritionLog {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date     DateTime @db.Date
+  mealType MealType
+  mealName String
+  kcal     Int
+  proteinG Float
+  carbsG   Float
+  fatG     Float
+  logged   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date, mealType])
+}
