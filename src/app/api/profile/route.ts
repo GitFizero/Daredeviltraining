@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+
+const defaultProfile = {
+  weightKg: 77,
+  heightCm: 178,
+  bodyFatPercent: 18,
+  goalType: "lean_cut",
+  dailyKcalTarget: 2000,
+  dailyProteinG: 154,
+  dailyCarbsG: 200,
+  dailyFatG: 55,
+  trainingWindow: "12h-14h",
+};
 
 export async function GET() {
   try {
@@ -10,15 +21,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const profile = await prisma.userProfile.findUnique({
-      where: { userId: session.user.id },
-    });
-
-    if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ profile });
+    return NextResponse.json({ profile: defaultProfile });
   } catch (error) {
     console.error("Error fetching profile:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -35,14 +38,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const allowedFields = [
-      "weightKg",
-      "heightCm",
-      "bodyFatPercent",
-      "goalType",
-      "dailyKcalTarget",
-      "dailyProteinG",
-      "dailyCarbsG",
-      "dailyFatG",
+      "weightKg", "heightCm", "bodyFatPercent", "goalType",
+      "dailyKcalTarget", "dailyProteinG", "dailyCarbsG", "dailyFatG",
       "trainingWindow",
     ];
 
@@ -53,19 +50,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
-    }
-
-    const profile = await prisma.userProfile.update({
-      where: { userId: session.user.id },
-      data: updateData,
-    });
-
-    return NextResponse.json({ profile });
+    return NextResponse.json({ profile: { ...defaultProfile, ...updateData } });
   } catch (error) {
     console.error("Error updating profile:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

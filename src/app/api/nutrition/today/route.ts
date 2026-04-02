@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { trainingDayMeals, restDayMeals } from "@/lib/nutrition-data";
 
 export async function GET() {
@@ -11,54 +10,30 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dayOfWeek = now.getDay();
 
     const isTrainingDay = dayOfWeek >= 1 && dayOfWeek <= 5;
     const mealSuggestions = isTrainingDay ? trainingDayMeals : restDayMeals;
 
-    const logs = await prisma.nutritionLog.findMany({
-      where: { userId, date: today },
-    });
-
-    const logsByType = new Map(logs.map((log) => [log.mealType, log]));
-
-    const meals = mealSuggestions.map((slot) => {
-      const log = logsByType.get(slot.type as any);
-      return {
-        type: slot.type,
-        label: slot.label,
-        time: slot.time,
-        suggestions: slot.suggestions,
-        logged: log?.logged ?? false,
-        loggedMeal: log?.mealName ?? null,
-      };
-    });
-
-    const loggedMeals = logs.filter((l) => l.logged);
-    const consumed = loggedMeals.reduce(
-      (totals, log) => ({
-        kcal: totals.kcal + log.kcal,
-        proteinG: totals.proteinG + log.proteinG,
-        carbsG: totals.carbsG + log.carbsG,
-        fatG: totals.fatG + log.fatG,
-      }),
-      { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 }
-    );
-
-    const profile = await prisma.userProfile.findUnique({ where: { userId } });
+    const meals = mealSuggestions.map((slot) => ({
+      type: slot.type,
+      label: slot.label,
+      time: slot.time,
+      suggestions: slot.suggestions,
+      logged: false,
+      loggedMeal: null,
+    }));
 
     return NextResponse.json({
       isTrainingDay,
       meals,
-      consumed,
+      consumed: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
       targets: {
-        dailyKcalTarget: profile?.dailyKcalTarget ?? 2000,
-        dailyProteinG: profile?.dailyProteinG ?? 154,
-        dailyCarbsG: profile?.dailyCarbsG ?? 200,
-        dailyFatG: profile?.dailyFatG ?? 55,
+        dailyKcalTarget: 2000,
+        dailyProteinG: 154,
+        dailyCarbsG: isTrainingDay ? 200 : 150,
+        dailyFatG: 55,
       },
     });
   } catch (error) {

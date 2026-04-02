@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { weeklyPlan } from "@/lib/workout-data";
-import { DayType } from "@/generated/prisma";
 
 export async function GET() {
   try {
@@ -12,49 +10,38 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
     const now = new Date();
     const dayOfWeek = now.getDay();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const dayPlan = weeklyPlan[dayOfWeek];
 
     if (!dayPlan || dayPlan.dayType === "REST") {
       return NextResponse.json({
         session: null,
-        dayPlan: dayPlan ?? { label: "Rest Day", tag: "REST", tagColor: "gray", dayType: "REST" },
+        dayPlan: dayPlan ?? { label: "Repos complet", tag: "Repos", tagColor: "devil-blue", dayType: "REST", exercises: [] },
       });
     }
 
-    let workoutSession = await prisma.workoutSession.findUnique({
-      where: { userId_date: { userId, date: today } },
-      include: { exercises: { orderBy: { orderIndex: "asc" } } },
-    });
+    // Build session from template data (no DB required)
+    const exercises = (dayPlan.exercises ?? []).map((ex, index) => ({
+      id: `ex-${dayOfWeek}-${index}`,
+      exerciseName: ex.name,
+      muscleGroup: ex.muscleGroup,
+      orderIndex: index,
+      sets: ex.sets,
+      reps: ex.reps,
+      weightKg: ex.weightKg,
+      setsCompleted: 0,
+      notes: ex.notes,
+    }));
 
-    if (!workoutSession) {
-      workoutSession = await prisma.workoutSession.create({
-        data: {
-          userId,
-          date: today,
-          dayType: dayPlan.dayType as DayType,
-          status: "PLANNED",
-          exercises: {
-            create: (dayPlan.exercises ?? []).map(
-              (ex: { name: string; muscleGroup: string; sets: number; reps: string; weightKg: number }, index: number) => ({
-                exerciseName: ex.name,
-                muscleGroup: ex.muscleGroup,
-                orderIndex: index,
-                sets: ex.sets,
-                reps: ex.reps,
-                weightKg: ex.weightKg,
-                setsCompleted: 0,
-              })
-            ),
-          },
-        },
-        include: { exercises: { orderBy: { orderIndex: "asc" } } },
-      });
-    }
+    const workoutSession = {
+      id: `session-${dayOfWeek}-${now.toISOString().split("T")[0]}`,
+      date: now.toISOString().split("T")[0],
+      dayType: dayPlan.dayType,
+      status: "PLANNED",
+      exercises,
+    };
 
     return NextResponse.json({
       session: workoutSession,

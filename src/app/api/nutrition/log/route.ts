@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { MealType } from "@/generated/prisma";
+
+const VALID_MEAL_TYPES = ["REVEIL", "PRE_TRAINING", "POST_TRAINING", "DINER", "SNACK_SOIR"];
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
     const { mealType, mealName, kcal, proteinG, carbsG, fatG } =
       await request.json();
 
@@ -22,31 +21,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!Object.values(MealType).includes(mealType)) {
+    if (!VALID_MEAL_TYPES.includes(mealType)) {
       return NextResponse.json(
         { error: "Invalid mealType" },
         { status: 400 }
       );
     }
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const log = await prisma.nutritionLog.upsert({
-      where: {
-        userId_date_mealType: { userId, date: today, mealType },
-      },
-      update: {
-        mealName,
-        kcal,
-        proteinG: proteinG ?? 0,
-        carbsG: carbsG ?? 0,
-        fatG: fatG ?? 0,
-        logged: true,
-      },
-      create: {
-        userId,
-        date: today,
+    return NextResponse.json({
+      log: {
+        id: `log-${mealType}-${Date.now()}`,
         mealType,
         mealName,
         kcal,
@@ -56,8 +40,6 @@ export async function POST(request: NextRequest) {
         logged: true,
       },
     });
-
-    return NextResponse.json({ log });
   } catch (error) {
     console.error("Error logging meal:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
