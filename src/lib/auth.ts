@@ -1,23 +1,42 @@
 import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
-export const authOptions: NextAuthOptions = {
-  providers: [
+const providers: NextAuthOptions["providers"] = [];
+
+// Only add Google if credentials are configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.body.read",
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    }),
-  ],
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  );
+}
+
+// Always available: demo login
+providers.push(
+  CredentialsProvider({
+    name: "Demo",
+    credentials: {
+      username: { label: "Nom", type: "text", placeholder: "Gaëtan" },
+    },
+    async authorize(credentials) {
+      // Accept any name for demo mode
+      const name = credentials?.username || "Gaëtan";
+      return {
+        id: "demo-user-gaetan",
+        name,
+        email: `${name.toLowerCase().replace(/\s/g, "")}@daredevil.app`,
+      };
+    },
+  })
+);
+
+export const authOptions: NextAuthOptions = {
+  providers,
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile, user }) {
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
@@ -25,12 +44,14 @@ export const authOptions: NextAuthOptions = {
       if (profile) {
         token.id = profile.sub;
       }
+      if (user) {
+        token.id = user.id;
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = (token.id as string) || token.sub || "";
-        (session as any).accessToken = token.accessToken;
       }
       return session;
     },
@@ -41,5 +62,5 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "daredevil-dev-secret-change-in-production",
 };

@@ -2,8 +2,19 @@
 
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 export default function SignInPage() {
+  const [loading, setLoading] = useState(false);
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    await signIn("credentials", {
+      username: "Gaëtan",
+      callbackUrl: "/training",
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <motion.div
@@ -15,6 +26,22 @@ export default function SignInPage() {
         <h1 className="font-heading text-3xl text-devil-red mb-2">DAREDEVIL</h1>
         <p className="text-devil-muted text-sm mb-10">Connecte-toi pour accéder à ton programme</p>
 
+        {/* Demo login — always available */}
+        <button
+          onClick={handleDemoLogin}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 bg-devil-red text-white px-6 py-4 rounded-xl font-bold text-base hover:bg-devil-red/90 transition-colors active:scale-95 disabled:opacity-50 mb-4"
+        >
+          {loading ? "Connexion..." : "Entrer comme Gaëtan"}
+        </button>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-devil-dim" />
+          <span className="text-devil-muted text-xs">ou</span>
+          <div className="flex-1 h-px bg-devil-dim" />
+        </div>
+
+        {/* Google login */}
         <button
           onClick={() => signIn("google", { callbackUrl: "/training" })}
           className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 px-6 py-4 rounded-xl font-medium text-base hover:bg-gray-100 transition-colors active:scale-95"
@@ -41,7 +68,7 @@ export default function SignInPage() {
         </button>
 
         <p className="text-devil-dim text-xs mt-6">
-          En te connectant, tu autorises l&apos;accès à Google Calendar et Google Fit
+          Le mode démo fonctionne sans configuration Google
         </p>
       </motion.div>
     </div>
