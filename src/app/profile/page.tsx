@@ -91,15 +91,22 @@ export default function ProfilePage() {
         <AuthButton />
       </div>
 
-      {/* Identity banner */}
+      {/* Identity banner with Daredevil art */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-devil-dark rounded-xl p-6 border border-devil-dim mb-6 text-center"
+        className="relative rounded-xl overflow-hidden mb-6 border border-devil-dim"
       >
-        <div className="text-4xl mb-2">😈</div>
-        <h2 className="font-heading text-xl text-devil-red">DAREDEVIL</h2>
-        <p className="text-devil-muted text-sm mt-1">Programme Gaëtan — Objectif Charlie Cox</p>
+        <img
+          src="https://m.media-amazon.com/images/S/pv-target-images/e2d3239a6b0d59d772e7c391e7df300a167f48d81e1155a98b528799019a54bd._SX1080_FMjpg_.jpg"
+          alt=""
+          className="w-full h-40 object-cover object-top opacity-40"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-devil-dark via-devil-dark/80 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-5 text-center">
+          <h2 className="font-heading text-xl text-devil-red">DAREDEVIL</h2>
+          <p className="text-devil-muted text-sm mt-1">Programme Gaëtan — Objectif Charlie Cox</p>
+        </div>
       </motion.div>
 
       {/* Body stats */}

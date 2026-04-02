@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiMinus, FiPlus, FiCheck, FiRefreshCw } from "react-icons/fi";
 import { GiWeightLiftingUp } from "react-icons/gi";
@@ -20,6 +21,7 @@ interface ExerciseCardProps {
   exercise: ExerciseData;
   index: number;
   onSetComplete: (setIndex: number) => void;
+  onSetUndo: (setIndex: number) => void;
   onShowAlternatives: () => void;
   onWeightChange: (newWeight: number) => void;
 }
@@ -28,10 +30,12 @@ export default function ExerciseCard({
   exercise,
   index: _index,
   onSetComplete,
+  onSetUndo,
   onShowAlternatives,
   onWeightChange,
 }: ExerciseCardProps) {
   const allCompleted = exercise.setsCompleted >= exercise.sets;
+  const [imgError, setImgError] = useState(false);
 
   const handleWeightDecrement = () => {
     const newWeight = Math.max(0, exercise.weightKg - 2.5);
@@ -41,6 +45,19 @@ export default function ExerciseCard({
   const handleWeightIncrement = () => {
     onWeightChange(exercise.weightKg + 2.5);
   };
+
+  const handleSetClick = (index: number) => {
+    const isCompleted = index < exercise.setsCompleted;
+    if (isCompleted) {
+      // Undo: set setsCompleted to this index (unchecks this and all after)
+      onSetUndo(index);
+    } else if (index === exercise.setsCompleted) {
+      // Complete next set
+      onSetComplete(index);
+    }
+  };
+
+  const hasValidGif = exercise.gifUrl && !exercise.gifUrl.startsWith("/exercises/") && !imgError;
 
   return (
     <motion.div
@@ -56,11 +73,12 @@ export default function ExerciseCard({
       {/* Top section: GIF + Info */}
       <div className="flex gap-4 mb-4">
         <div className="w-20 h-20 rounded-xl bg-devil-dark border border-devil-dim flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {exercise.gifUrl ? (
+          {hasValidGif ? (
             <img
               src={exercise.gifUrl}
               alt={exercise.name}
               className="w-full h-full object-cover rounded-xl"
+              onError={() => setImgError(true)}
             />
           ) : (
             <GiWeightLiftingUp className="text-devil-muted text-3xl" />
@@ -111,22 +129,24 @@ export default function ExerciseCard({
         </span>
       </div>
 
-      {/* Per-set checkboxes */}
+      {/* Per-set checkboxes — tap to complete, tap again to undo */}
       <div className="flex items-center justify-center gap-2 mb-4">
         {Array.from({ length: exercise.sets }).map((_, index) => {
           const isCompleted = index < exercise.setsCompleted;
+          const isNext = index === exercise.setsCompleted;
 
           return (
             <button
               key={index}
-              onClick={() => !isCompleted && onSetComplete(index)}
-              disabled={isCompleted}
+              onClick={() => handleSetClick(index)}
               className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                 isCompleted
-                  ? "bg-devil-red border-devil-red text-white"
-                  : "border-devil-dim text-devil-muted hover:border-devil-red/50 active:scale-90"
+                  ? "bg-devil-red border-devil-red text-white hover:bg-devil-red/70 hover:border-devil-red/70 active:scale-90"
+                  : isNext
+                  ? "border-devil-red/50 text-devil-muted hover:border-devil-red active:scale-90"
+                  : "border-devil-dim text-devil-dim"
               }`}
-              aria-label={`Série ${index + 1}${isCompleted ? " terminée" : ""}`}
+              aria-label={`Série ${index + 1}${isCompleted ? " — cliquer pour annuler" : ""}`}
             >
               <AnimatePresence mode="wait">
                 {isCompleted ? (

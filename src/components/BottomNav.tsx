@@ -11,6 +11,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/training", label: "Training", emoji: "💪" },
+  { href: "/planning", label: "Planning", emoji: "📅" },
   { href: "/nutrition", label: "Nutrition", emoji: "🥩" },
   { href: "/dashboard", label: "Stats", emoji: "📊" },
   { href: "/profile", label: "Profil", emoji: "⚙️" },
@@ -19,9 +20,12 @@ const navItems: NavItem[] = [
 export default function BottomNav() {
   const pathname = usePathname();
 
+  // Don't show nav on auth pages or landing
+  if (pathname === "/" || pathname?.startsWith("/auth")) return null;
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-lg border-t border-devil-dim safe-area-bottom">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-lg border-t border-devil-dim">
+      <div className="flex items-center justify-around max-w-lg mx-auto" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {navItems.map((item) => {
           const isActive = pathname?.startsWith(item.href);
 
@@ -29,16 +33,21 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors duration-200 ${
+              className={`flex flex-col items-center justify-center flex-1 py-2 gap-0.5 transition-colors duration-200 ${
                 isActive
-                  ? "text-devil-red border-t-2 border-devil-red"
-                  : "text-devil-muted border-t-2 border-transparent"
+                  ? "text-devil-red"
+                  : "text-devil-muted"
               }`}
             >
-              <span className="text-xl leading-none">{item.emoji}</span>
-              <span className="text-[10px] font-medium tracking-wide">
+              <span className={`text-lg leading-none ${isActive ? "scale-110" : ""} transition-transform`}>
+                {item.emoji}
+              </span>
+              <span className="text-[9px] font-medium tracking-wide">
                 {item.label}
               </span>
+              {isActive && (
+                <div className="w-1 h-1 rounded-full bg-devil-red mt-0.5" />
+              )}
             </Link>
           );
         })}

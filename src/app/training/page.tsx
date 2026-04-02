@@ -91,37 +91,36 @@ export default function TrainingPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleSetComplete = async (exerciseId: string, newSetsCompleted: number) => {
-    try {
-      const res = await fetch("/api/workout/exercise", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exerciseId, setsCompleted: newSetsCompleted }),
-      });
-      const data = await res.json();
-      setSession((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          exercises: prev.exercises.map((ex) =>
-            ex.id === exerciseId ? { ...ex, setsCompleted: data.exercise.setsCompleted } : ex
-          ),
-        };
-      });
-
-      // Check if all exercises are complete
-      if (session) {
-        const updatedExercises = session.exercises.map((ex) =>
+  const updateSetsCompleted = (exerciseId: string, newSetsCompleted: number) => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        exercises: prev.exercises.map((ex) =>
           ex.id === exerciseId ? { ...ex, setsCompleted: newSetsCompleted } : ex
-        );
-        const allDone = updatedExercises.every((ex) => ex.setsCompleted >= ex.sets);
-        if (allDone && !showSummary) {
-          handleSessionComplete();
-        }
+        ),
+      };
+      // Check if all exercises are complete
+      const allDone = updated.exercises.every((ex) => ex.setsCompleted >= ex.sets);
+      if (allDone && !showSummary) {
+        setTimeout(() => handleSessionComplete(), 500);
       }
-    } catch (err) {
-      console.error("Erreur mise à jour:", err);
-    }
+      return updated;
+    });
+    // Fire and forget API call
+    fetch("/api/workout/exercise", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exerciseId, setsCompleted: newSetsCompleted }),
+    }).catch(() => {});
+  };
+
+  const handleSetComplete = (exerciseId: string, newSetsCompleted: number) => {
+    updateSetsCompleted(exerciseId, newSetsCompleted);
+  };
+
+  const handleSetUndo = (exerciseId: string, setIndex: number) => {
+    updateSetsCompleted(exerciseId, setIndex);
   };
 
   const handleWeightChange = async (exerciseId: string, newWeight: number) => {
@@ -321,6 +320,7 @@ export default function TrainingPage() {
                   }}
                   index={index}
                   onSetComplete={(setIndex) => handleSetComplete(exercise.id, setIndex + 1)}
+                  onSetUndo={(setIndex) => handleSetUndo(exercise.id, setIndex)}
                   onWeightChange={(newWeight) => handleWeightChange(exercise.id, newWeight)}
                   onShowAlternatives={() => setSelectedExerciseIndex(index)}
                 />

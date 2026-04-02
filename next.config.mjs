@@ -1,19 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "v2.exercisedb.io",
-      },
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-      },
-      {
-        protocol: "https",
-        hostname: "media.giphy.com",
-      },
+      { protocol: "https", hostname: "**" },
     ],
   },
   headers: async () => [
